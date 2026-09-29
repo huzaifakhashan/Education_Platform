@@ -2,12 +2,6 @@
 
 تطبيق تعليمي (ويب + أندرويد) من كود Flutter واحد: فيديوهات، دروس، تتبّع تقدّم، تسجيل دخول، أدوار وصلاحيات (مدير / مدرّس / طالب)، وإدارة دورات، ورسائل خاصة بين الطالب والمدرّس.
 
-- **الويب:** https://learning-app-fff77.web.app
-- **الخلفية:** Firebase (Authentication + Firestore + Hosting)
-
----
-
-## لقطات الشاشة
 
 <table>
 <tr>
@@ -51,9 +45,8 @@
 
 ---
 
-## البنية التقنية
+## الطبقة التقنية
 
-| الطبقة | التقنية |
 |---|---|
 | الواجهة | Flutter (Material 3) |
 | الحالة | `ChangeNotifier` + `InheritedWidget` بسيط (`AppScope`) — بدون حزمة إدارة حالة خارجية |
@@ -63,79 +56,6 @@
 | التخزين المحلي | `shared_preferences` (الثيم، وكل بيانات وضع "بدون Firebase") |
 | الفيديو | حزمة `video_player` (روابط `mp4` مباشرة) |
 
-### هيكلية `lib/`
-
-```
-lib/
-├── config.dart               # مفتاح تفعيل Firebase (kUseFirebase)
-├── firebase_options.dart     # مولَّد بواسطة flutterfire configure
-├── models/                   # Course, Lesson, Profile/UserRole, Chat
-├── data/courses_data.dart    # دورات تجريبية (sampleCourses) للاستيراد
-├── services/
-│   ├── auth_service.dart           # عقد المصادقة + الصلاحيات (canEditCourse...)
-│   ├── local_auth_service.dart     # تنفيذ محلي (بدون Firebase)
-│   ├── firebase_auth_service.dart  # تنفيذ Firebase + أول مستخدم = مدير
-│   ├── course_repository.dart      # In-memory أو Firestore
-│   ├── progress_service.dart       # تقدّم المستخدم + مزامنة سحابية
-│   ├── directory_service.dart      # قائمة المستخدمين وتغيير الأدوار (Firebase فقط)
-│   ├── chat_service.dart           # المحادثات الخاصة (Firebase فقط)
-│   └── theme_controller.dart
-├── screens/                  # كل شاشة UI
-└── widgets/                  # عناصر مشتركة (شعار، شريط تقدّم، Pill/RoleChip)
-```
-
----
-
-## البدء السريع
-
-### المتطلبات
-- Flutter SDK (تم التطوير على 3.44.x / Dart 3.12).
-- للأندرويد: Android SDK.
-- (اختياري) مشروع Firebase خاص بك لتفعيل الحسابات السحابية.
-
-### التشغيل
-
-```bash
-flutter pub get
-flutter run -d chrome      # ويب
-flutter run                # أندرويد (جهاز/محاكي متصل)
-```
-
-### وضعا التشغيل
-
-يتحكم [lib/config.dart](lib/config.dart) بمصدر البيانات:
-
-```dart
-const kUseFirebase = false; // أو true
-```
-
-| الوضع | الحسابات | الأدوار | الدورات | الرسائل |
-|---|---|---|---|---|
-| `false` (محلي) | على الجهاز فقط (`shared_preferences`) | الجميع "طالب" دائماً | 3 دورات تجريبية مدمجة في الذاكرة | غير متاحة |
-| `true` (Firebase) | Firebase Authentication، تُزامَن بين الأجهزة | فعلية (مدير/مدرّس/طالب)، أول مستخدم = مدير | Firestore، يديرها المدير/المدرّس من التطبيق | متاحة |
-
-النسخة المنشورة تستخدم `true` مع مشروع Firebase حقيقي (`learning-app-fff77`).
-
----
-
-## ربط مشروع Firebase الخاص بك (من الصفر)
-
-```bash
-dart pub global activate flutterfire_cli
-flutterfire configure          # يولّد lib/firebase_options.dart لمشروعك
-```
-
-ثم في [Firebase Console](https://console.firebase.google.com):
-1. فعّل **Authentication → Sign-in method → Email/Password**.
-2. أنشئ قاعدة **Firestore Database** (Production mode).
-3. انشر قواعد الأمان الجاهزة في المستودع:
-   ```bash
-   firebase deploy --only firestore:rules --project <project-id>
-   ```
-4. اجعل `kUseFirebase = true` في `lib/config.dart`.
-5. أول من يسجّل حساباً في التطبيق بعدها يصبح المدير تلقائياً.
-
----
 
 ## الأدوار والصلاحيات
 
@@ -149,57 +69,6 @@ flutterfire configure          # يولّد lib/firebase_options.dart لمشرو
 
 الصلاحيات مفروضة في **طبقتين**: الواجهة تُخفي ما لا يخص المستخدم، وقواعد أمان Firestore ([firestore.rules](firestore.rules)) ترفض أي طلب مخالف حتى لو تم تجاوز الواجهة — وهذا ما يُختبر فعلياً (انظر قسم الاختبارات).
 
----
-
-## الاختبارات
-
-```bash
-flutter analyze
-flutter test
-```
-
-24 اختباراً في [test/widget_test.dart](test/widget_test.dart) تغطي: المصادقة، التقدّم ومزامنته، الأدوار والصلاحيات، النماذج، والشاشات (تسجيل، تسجيل دخول، الدورات، الوضع الداكن، إنشاء دورة كمدرّس...).
-
-### اختبار قواعد أمان Firestore (على محاكي Firebase)
-
-[rules_test/rules.test.js](rules_test/rules.test.js) يتحقق من القواعد نفسها: طالب لا يستطيع كتابة دورة، مدرّس لا يعدّل دورة غيره، لا يمكن لأحد انتحال دور مدير، لا يمكن قراءة محادثة لست طرفاً فيها... إلخ.
-
-```bash
-cd rules_test
-npm install
-cd ..
-firebase emulators:exec --only firestore --project rules-test "cd rules_test && npm test"
-```
-
----
-
-## النشر
-
-### الويب (Firebase Hosting)
-
-```bash
-flutter build web --release
-firebase deploy --only hosting --project <project-id>
-```
-
-### أندرويد
-
-```bash
-flutter build apk --release           # ملف APK للتجربة المباشرة
-flutter build appbundle --release     # .aab لرفعه على Google Play
-```
-
-> قبل النشر على Google Play: غيّر اسم الحزمة من `com.example.learning_app` إلى اسم خاص بك في `android/app/build.gradle.kts` و`AndroidManifest.xml`، ثم أعد `flutterfire configure`، ووقّع الحزمة بمفتاح إصدار خاص بك (الـ APK الحالي موقّع بمفتاح التطوير الافتراضي فقط).
-
----
-
-## ملاحظات وقيود معروفة
-
-- **خصوصية الملفات الشخصية:** اسم كل مستخدم وبريده ودوره مقروء لأي حساب مسجّل دخول (ضروري لبناء قائمة المراسلة)، وليس عاماً لغير المسجّلين. مناسب لتطبيق تعليمي صغير/مغلق؛ يحتاج تعديلاً إن أصبح عاماً بأعداد كبيرة.
-- **روابط الفيديو:** يجب أن تكون روابط `mp4` مباشرة قابلة للوصول من المتصفح/الجهاز (لا يوجد رفع ملفات داخل التطبيق حالياً).
-- **الوضع المحلي (`kUseFirebase = false`)** كل الحسابات فيه "طالب" ولا يدعم الأدوار أو الرسائل أو مزامنة السحابة — مخصّص للتجربة السريعة دون إعداد Firebase.
-
----
 
 ## الرخصة
 
